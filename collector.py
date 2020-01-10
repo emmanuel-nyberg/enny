@@ -10,7 +10,7 @@ ALPHA_VANTAGE_API_URL = "https://www.alphavantage.co/query?"
 
 class AlphaVantage:
     """This class will act as a collector, giving access to the Alpha Vantage API.
-    Its methods return the recieved JSON as a string for ease of storage."""
+    Its methods return the recieved JSON."""
     def __init__(self, args):
         self.key = args.apikey
         self.url = ALPHA_VANTAGE_API_URL
@@ -18,12 +18,23 @@ class AlphaVantage:
         endpoint = "{}function=TIME_SERIES_DAILY&symbol={}&outputsize=full&apikey={}".format(
             self.url, symbol, self.key)
         r = requests.request("GET", endpoint)
-        return json.dumps(r.json())
+        return r.json()
     def get_full_hourly(self, symbol):
         endpoint = "{}function=TIME_SERIES_INTRADAY&symbol={}&interval=60min&outputsize=full&apikey={}".format(
             self.url, symbol, self.key)
         r = requests.request("GET", endpoint)
-        return json.dumps(r.json())
+        return r.json()
+
+def validate_payload(args, data):
+    """Check if the data is fresh. Returns a boolean."""
+    if args.hourly:
+        ts = "Time Series (60min)"
+    else:
+        ts = "Time Series (Daily)"
+    if date.today().strftime("%Y-%m-%d") in data[ts].keys():
+        return True
+    else:
+        return False
 
 def main():
     """Do everythong"""
@@ -45,8 +56,14 @@ def main():
                     payload = av.get_full_daily(s.strip("\n"))
                 elif args.hourly:
                     payload = av.get_full_hourly(s.strip("\n"))
-                out.write(payload + "\n")
-                time.sleep(13) #Let's be good API users and limit us to 4-5 API calls a minute
+                if validate_payload(args, payload):
+                    out.write(json.dumps(payload) + "\n")
+                else:
+                    e = {}
+                    e["Error"] = "Data for {} not fresh.\n".format(s)
+                    out.write(json.dumps(e))
+
+                time.sleep(13) #Let's be good API users and limit ourselves to 4-5 API calls a minute
 
 if __name__ == "__main__":
     main()
