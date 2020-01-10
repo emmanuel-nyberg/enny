@@ -25,13 +25,20 @@ class AlphaVantage:
         r = requests.request("GET", endpoint)
         return r.json()
 
-def validate_payload(args, data):
-    """Check if the data is fresh. Returns a boolean."""
+def prettify_dict(args, data):
+    """The AlphaVantage API returns ugly, multi-word dictionary keys.
+    Make them prettier. Returns a json/dict."""
     if args.hourly:
         ts = "Time Series (60min)"
     else:
         ts = "Time Series (Daily)"
-    if date.today().strftime("%Y-%m-%d") in data[ts].keys():
+    data["metadata"] = data.pop('Meta Data')
+    data["timeseries"] = data.pop(ts)
+    return data
+
+def validate_payload(data):
+    """Check if the data is fresh. Returns a boolean."""
+    if date.today().strftime("%Y-%m-%d") in data['timeseries'].keys():
         return True
     else:
         return False
@@ -53,10 +60,10 @@ def main():
         for s in symbols:
             with open(args.outfile, "a") as out:
                 if args.daily:
-                    payload = av.get_full_daily(s.strip("\n"))
+                    payload = prettify_dict(args, av.get_full_daily(s.strip("\n")))
                 elif args.hourly:
-                    payload = av.get_full_hourly(s.strip("\n"))
-                if validate_payload(args, payload):
+                    payload = prettify_dict(args, av.get_full_hourly(s.strip("\n")))
+                if validate_payload(payload):
                     out.write(json.dumps(payload) + "\n")
                 else:
                     e = {}
