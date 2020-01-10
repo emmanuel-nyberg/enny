@@ -1,0 +1,18 @@
+@startuml
+
+actor [Collector] as C
+
+interface "Alpha Vantage" as AV
+
+[Validator] as V
+[Normalisator] as N
+database DataTables as DT
+
+C --> AV: REST API call
+C <-- AV: HTTP payload
+C --> V: Payload
+V --> N: Payload OK
+N --> DT: Formattted data saved on disk\n as DataTables objects
+
+
+@enduml
