@@ -1,0 +1,11 @@
+image: python:3.7.6
+
+pipelines:
+  default:
+    - step:
+        caches:
+          - pip
+        script:
+          - pip install pipenv
+          - pipenv install
+          - pipenv run pylint --exit-zero *.py
