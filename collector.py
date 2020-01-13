@@ -3,45 +3,66 @@
 import argparse
 import json
 import time
-from datetime import date
+from collections import namedtuple
+import datetime
+import re
 import requests
 
 ALPHA_VANTAGE_API_URL = "https://www.alphavantage.co/query?"
+DATEFORMAT = "%Y-%m-%d"
+TIMEFORMAT = "%H:%M:%S"
+Config = namedtuple('Config', ['url', 'dateformat', 'timeformat', 'ts_key'])
 
-class AlphaVantage:
+
+
+
+class Collector:
     """This class will act as a collector, giving access to the Alpha Vantage API.
     Its methods return the recieved JSON."""
-    def __init__(self, args):
-        self.key = args.apikey
-        self.url = ALPHA_VANTAGE_API_URL
-    def get_full_daily(self, symbol):
-        endpoint = "{}function=TIME_SERIES_DAILY&symbol={}&outputsize=full&apikey={}".format(
-            self.url, symbol, self.key)
-        r = requests.request("GET", endpoint)
-        return r.json()
-    def get_full_hourly(self, symbol):
-        endpoint = "{}function=TIME_SERIES_INTRADAY&symbol={}&interval=60min&outputsize=full&apikey={}".format(
-            self.url, symbol, self.key)
-        r = requests.request("GET", endpoint)
-        return r.json()
+    def __init__(self, args, config):
+        self.args = args
+        self.config = config
 
-def prettify_dict(args, data):
-    """The AlphaVantage API returns ugly, multi-word dictionary keys.
-    Make them prettier. Returns a json/dict."""
-    if args.hourly:
-        ts = "Time Series (60min)"
-    else:
-        ts = "Time Series (Daily)"
-    data["metadata"] = data.pop('Meta Data')
-    data["timeseries"] = data.pop(ts)
-    return data
+    def _generate_endpoint(self, symbol):
+        endpoint = "{}function={}&symbol={}{}&outputsize=full&apikey={}".format(
+                self.config.url,
+                "TIME_SERIES_DAILY" if self.args.daily else "TIME_SERIES_INTRADAY",
+                symbol,
+                "&interval=60min" if self.args.hourly else "",
+                self.args.apikey)
+        return endpoint
 
-def validate_payload(data):
-    """Check if the data is fresh. Returns a boolean."""
-    if date.today().strftime("%Y-%m-%d") in data['timeseries'].keys():
-        return True
-    else:
-        return False
+    def _api_call(self, endpoint):
+        r = requests.request("GET", endpoint)
+        if r.status_code == 200:
+            r.json()['Meta Data']['fetched'] = datetime.datetime.now().strftime(self.config.dateformat + self.config.timeformat)
+            return r.json()
+        else:
+            e = {"Error": endpoint + " returned " + str(r.status_code)}
+            return e
+
+    def collect_data(self, symbol):
+        endpoint = self._generate_endpoint(symbol)
+        payload = self._api_call(endpoint)
+        if re.search("Error.*", str(payload.keys())):
+            return payload
+        else:
+            return self._prettify_dict(payload, symbol)
+
+    def _prettify_dict(self, payload, symbol):
+        """The AlphaVantage API returns ugly, multi-word dictionary keys.
+        Make them prettier. Returns a json/dict."""
+        if self._validate_payload(payload):
+            payload["metadata"] = payload.pop('Meta Data')
+            payload["timeseries"] = payload.pop(self.config.ts_key)
+            return payload 
+        else:
+            return {"Error": f"Data for {symbol} is not fresh"}
+
+    def _validate_payload(self, data):
+        """Check if the data is fresh. Returns a boolean."""
+        if re.search(f"{datetime.date.today().strftime(self.config.dateformat)}.*", str(data[self.config.ts_key].keys())):
+            return True
 
 def main():
     """Do everythong"""
@@ -55,20 +76,17 @@ def main():
     parser.add_argument("--hourly", help="Fetch intraday history by the hour", action="store_true")
     args = parser.parse_args()
 
-    av = AlphaVantage(args)
+    config = Config(ALPHA_VANTAGE_API_URL, 
+        DATEFORMAT,
+        TIMEFORMAT,
+        "Time Series " + "(Daily)" if args.daily else "Time Series " + "(60min)")
+
+    av = Collector(args, config)
     with open(args.symbols, "r") as symbols:
         for s in symbols:
             with open(args.outfile, "a") as out:
-                if args.daily:
-                    payload = prettify_dict(args, av.get_full_daily(s.strip("\n")))
-                elif args.hourly:
-                    payload = prettify_dict(args, av.get_full_hourly(s.strip("\n")))
-                if validate_payload(payload):
-                    out.write(json.dumps(payload) + "\n")
-                else:
-                    e = {}
-                    e["Error"] = "Data for {} not fresh.\n".format(s)
-                    out.write(json.dumps(e))
+                payload = av.collect_data(s.strip())
+                out.write(json.dumps(payload) + "\n")
 
                 time.sleep(13) #Let's be good API users and limit ourselves to 4-5 API calls a minute
 
