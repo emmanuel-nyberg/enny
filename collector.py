@@ -6,8 +6,8 @@ import time
 from collections import namedtuple
 import datetime
 import re
-import requests
 import sys
+import requests
 
 ALPHA_VANTAGE_API_URL = "https://www.alphavantage.co/query?"
 DATEFORMAT = "%Y-%m-%d"
@@ -84,7 +84,6 @@ def parse_args(args):
     parser.add_argument(
         "--hourly", help="Fetch intraday history by the hour", action="store_true"
     )
-    print(args)
     return parser.parse_args(args)
 
 

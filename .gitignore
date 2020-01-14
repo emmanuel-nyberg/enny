@@ -1,1 +1,5 @@
 apikey
+.pylintrc
+.vscode
+__pycache__
+*.json
