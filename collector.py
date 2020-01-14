@@ -7,6 +7,7 @@ from collections import namedtuple
 import datetime
 import re
 import requests
+import sys
 
 ALPHA_VANTAGE_API_URL = "https://www.alphavantage.co/query?"
 DATEFORMAT = "%Y-%m-%d"
@@ -35,9 +36,6 @@ class Collector:
     def _api_call(self, params):
         r = requests.get(self.config.url, params=params)
         if r.status_code == 200:
-            r.json()["Meta Data"]["fetched"] = datetime.datetime.now().strftime(
-                self.config.dateformat + self.config.timeformat
-            )
             return r.json()
         else:
             e = {"Error": r.url + " returned " + str(r.status_code)}
@@ -70,8 +68,7 @@ class Collector:
             return True
 
 
-def main():
-    """Do everythong"""
+def parse_args(args):
     parser = argparse.ArgumentParser()
     parser.add_argument("-k", "--apikey", required=True, help="Must use apikey")
     parser.add_argument(
@@ -87,13 +84,20 @@ def main():
     parser.add_argument(
         "--hourly", help="Fetch intraday history by the hour", action="store_true"
     )
-    args = parser.parse_args()
+    print(args)
+    return parser.parse_args(args)
+
+
+def main():
+    """Do everythong"""
+
+    args = parse_args(sys.argv[1:])
 
     config = Config(
         ALPHA_VANTAGE_API_URL,
         DATEFORMAT,
         TIMEFORMAT,
-        "Time Series " + "(Daily)" if args.daily else "Time Series " + "(60min)",
+        "Time Series (Daily)" if args.daily else "Time Series (60min)",
     )
 
     av = Collector(args, config)
