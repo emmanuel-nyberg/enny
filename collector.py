@@ -52,20 +52,20 @@ class Collector:
     def _prettify_dict(self, payload, symbol):
         """The AlphaVantage API returns ugly, multi-word dictionary keys.
         Make them prettier. Returns a json/dict."""
-        if self._validate_payload(payload):
-            payload["metadata"] = payload.pop("Meta Data")
-            payload["timeseries"] = payload.pop(self.config.ts_key)
-            return payload
-        else:
-            return {"Error": f"Data for {symbol} is not fresh"}
+        try:
+            if self._validate_payload(payload):
+                payload["metadata"] = payload.pop("Meta Data")
+                payload["timeseries"] = payload.pop(self.config.ts_key)
+                return payload
+        except KeyError as e:
+            return e
 
     def _validate_payload(self, data):
-        """Check if the data is fresh. Returns a boolean."""
-        if re.search(
-            f"{datetime.date.today().strftime(self.config.dateformat)}.*",
-            str(data[self.config.ts_key].keys()),
-        ):
+        """Check if the data contains the expected data structure. Returns True or an exception"""
+        if "Meta Data" in data.keys():
             return True
+        else:
+            raise KeyError
 
 
 def parse_args(args):
