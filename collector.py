@@ -8,6 +8,7 @@ import datetime
 import re
 import sys
 import requests
+from urllib.error import HTTPError
 
 ALPHA_VANTAGE_API_URL = "https://www.alphavantage.co/query?"
 DATEFORMAT = "%Y-%m-%d"
@@ -35,19 +36,16 @@ class Collector:
 
     def _api_call(self, params):
         r = requests.get(self.config.url, params=params)
-        if r.status_code == 200:
-            return r.json()
-        else:
-            e = {"Error": r.url + " returned " + str(r.status_code)}
-            return e
+        r.raise_for_status()
+        return r.json()
 
     def collect_data(self, symbol):
         params = self._generate_parameters(symbol)
-        payload = self._api_call(params)
-        if re.search("Error.*", str(payload.keys())):
-            return payload
-        else:
-            return self._prettify_dict(payload, symbol)
+        try:
+            payload = self._api_call(params)
+        except HTTPError as e:
+            return {"Error": f"There was a problem fetching data for {symbol}."}
+        return self._prettify_dict(payload, symbol)
 
     def _prettify_dict(self, payload, symbol):
         """The AlphaVantage API returns ugly, multi-word dictionary keys.
