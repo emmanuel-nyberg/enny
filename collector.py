@@ -4,16 +4,16 @@ import argparse
 import json
 import time
 from collections import namedtuple
-import datetime
-import re
 import sys
-import requests
+import sqlite3
 from urllib.error import HTTPError
+import requests
+import pandas as pd
 
 ALPHA_VANTAGE_API_URL = "https://www.alphavantage.co/query?"
 DATEFORMAT = "%Y-%m-%d"
 TIMEFORMAT = "%H:%M:%S"
-Config = namedtuple("Config", ["url", "dateformat", "timeformat", "ts_key"])
+Config = namedtuple("Config", ["url", "dateformat", "timeformat", "ts_key", "db"])
 
 
 class Collector:
@@ -25,7 +25,7 @@ class Collector:
         self.config = config
 
     def _generate_parameters(self, symbol):
-        params = {"symbol": symbol, "outputsize": "full", "apikiey": self.args.apikey}
+        params = {"symbol": symbol, "outputsize": "full", "apikey": self.args.apikey}
         if self.args.hourly:
             params.update({"interval": "60min", "function": "TIME_SERIES_INTRADAY"})
         elif self.args.daily:
@@ -35,19 +35,21 @@ class Collector:
         return params
 
     def _api_call(self, params):
+        """Use Requests to get the data. Returns json or a HTTPError."""
         r = requests.get(self.config.url, params=params)
         r.raise_for_status()
         return r.json()
 
     def collect_data(self, symbol):
+        """Get the data. Returns a pretty dict."""
         params = self._generate_parameters(symbol)
         try:
             payload = self._api_call(params)
-        except HTTPError as e:
+        except HTTPError:
             return {"Error": f"There was a problem fetching data for {symbol}."}
-        return self._prettify_dict(payload, symbol)
+        return self._prettify_dict(payload)
 
-    def _prettify_dict(self, payload, symbol):
+    def _prettify_dict(self, payload):
         """The AlphaVantage API returns ugly, multi-word dictionary keys.
         Make them prettier. Returns a json/dict."""
         try:
@@ -66,7 +68,22 @@ class Collector:
             raise KeyError
 
 
+def payload_to_dataframe(payload):
+    """Turn the timeseries into a Pandas dataframe for further operations."""
+    return pd.read_json(json.dumps(payload["timeseries"]), orient="index")
+
+
+def store_data(df, symbol, config):
+    """Store the data in a SQL database.
+        TODO: Set up a real db. instead of sqlite3 files."""
+    with sqlite3.connect(config.db) as con:
+        df.to_sql(
+            symbol, con, if_exists="replace", index=True,
+        )
+
+
 def parse_args(args):
+    """Parse args. Retuns a Namespace object."""
     parser = argparse.ArgumentParser()
     parser.add_argument("-k", "--apikey", required=True, help="Must use apikey")
     parser.add_argument(
@@ -74,9 +91,6 @@ def parse_args(args):
         "--symbols",
         help="Name of file containing the stocks we shall fetch",
         default="./NDX",
-    )
-    parser.add_argument(
-        "-o", "--outfile", help="Name of file to write data to", default="./stonks.json"
     )
     parser.add_argument("--daily", help="Fetch daily history", action="store_true")
     parser.add_argument(
@@ -95,16 +109,16 @@ def main():
         DATEFORMAT,
         TIMEFORMAT,
         "Time Series (Daily)" if args.daily else "Time Series (60min)",
+        "test.db",
     )
 
     av = Collector(args, config)
     with open(args.symbols, "r") as symbols:
         for s in symbols:
-            with open(args.outfile, "a") as out:
-                payload = av.collect_data(s.strip())
-                out.write(json.dumps(payload) + "\n")
-
-                time.sleep(13)  # Let's limit ourselves to 4-5 API calls a minute
+            payload = av.collect_data(s.strip())
+            df = payload_to_dataframe(payload)
+            store_data(df, s, config)
+            time.sleep(13)  # Let's limit ourselves to 4-5 API calls a minute
 
 
 if __name__ == "__main__":
