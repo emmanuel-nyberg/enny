@@ -1,0 +1,19 @@
+@startuml
+
+title Components
+
+[Data Collector] as DC
+[Data Validator] as DV  
+[Data Normalisator] as DN
+
+[Data store] as DS
+
+DC <- (Alpha Vantage)
+note right of (Alpha Vantage): This should be interchangable
+DC -- DV
+DV -- DN
+
+DN .. DS
+note right of DS: If huge, maybe a DataTable?
+
+@enduml

@@ -9,3 +9,4 @@ pipelines:
           - pip install pipenv
           - pipenv install
           - pipenv run pylint --exit-zero *.py
+          - pipenv run python -m unittest tests/test_collector.py --locals
