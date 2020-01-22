@@ -3,9 +3,9 @@
 import unittest
 from urllib.error import HTTPError
 import json
-import collector
 import requests_mock
 import pandas.core
+import collector
 
 
 class TestCollectorMainMethods(unittest.TestCase):

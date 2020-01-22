@@ -76,10 +76,11 @@ def payload_to_dataframe(payload):
 def store_data(df, symbol, config):
     """Store the data in a SQL database.
         TODO: Set up a real db. instead of sqlite3 files."""
+    df.rename(columns=lambda x: "".join([i for i in x if i.isalpha()]), inplace=True)
+
     with sqlite3.connect(config.db) as con:
-        df.to_sql(
-            symbol, con, if_exists="replace", index=True,
-        )
+        df.to_sql(symbol, con, if_exists="replace")
+        con.commit()
 
 
 def parse_args(args):
@@ -117,7 +118,7 @@ def main():
         for s in symbols:
             payload = av.collect_data(s.strip())
             df = payload_to_dataframe(payload)
-            store_data(df, s, config)
+            store_data(df, s.strip(), config)
             time.sleep(13)  # Let's limit ourselves to 4-5 API calls a minute
 
 
