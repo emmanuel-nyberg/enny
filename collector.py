@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 
-import argparse
+import os
 import json
 import time
 from collections import namedtuple
-import sys
 import sqlite3
 from urllib.error import HTTPError
 import requests
@@ -13,22 +12,40 @@ import pandas as pd
 ALPHA_VANTAGE_API_URL = "https://www.alphavantage.co/query?"
 DATEFORMAT = "%Y-%m-%d"
 TIMEFORMAT = "%H:%M:%S"
-Config = namedtuple("Config", ["url", "dateformat", "timeformat", "ts_key", "db"])
 
 
 class Collector:
     """This class will act as a collector, giving access to the Alpha Vantage API.
     Its methods return the recieved JSON."""
 
-    def __init__(self, args, config):
-        self.args = args
-        self.config = config
+    def __init__(self):
+        self.config = self._parse_env()
+
+    def _parse_env(self):
+
+        """Parse config. Retuns a Config NamedTuple."""
+        Config = namedtuple(
+            "Config",
+            ["url", "dateformat", "timeformat", "ts_key", "db", "symbols", "apikey",],
+        )
+        config = Config(
+            os.getenv("ENNY_API_URL", ALPHA_VANTAGE_API_URL),
+            os.getenv("ENNY_DATEFORMAT", DATEFORMAT),
+            os.getenv("ENNY_TIMEFORMAT", TIMEFORMAT),
+            "Time Series (60min)"
+            if os.getenv("ENNY_HOURLY")
+            else "Time Series (Daily)",
+            os.getenv("ENNY_DATABASE", "./test.db"),
+            os.getenv("ENNY_SYMBOLFILE", "./NDX"),
+            os.getenv("ENNY_APIKEY"),
+        )
+        return config
 
     def _generate_parameters(self, symbol):
-        params = {"symbol": symbol, "outputsize": "full", "apikey": self.args.apikey}
-        if self.args.hourly:
+        params = {"symbol": symbol, "outputsize": "full", "apikey": self.config.apikey}
+        if "60min" in self.config.ts_key:
             params.update({"interval": "60min", "function": "TIME_SERIES_INTRADAY"})
-        elif self.args.daily:
+        elif "Daily" in self.config.ts_key:
             params.update({"function": "TIME_SERIES_DAILY"})
         else:
             raise Exception("Either hourly or daily should be defined")
@@ -73,52 +90,24 @@ def payload_to_dataframe(payload):
     return pd.read_json(json.dumps(payload["timeseries"]), orient="index")
 
 
-def store_data(df, symbol, config):
+def store_data(df, symbol, instance):
     """Store the data in a SQL database.
         TODO: Set up a real db. instead of sqlite3 files."""
     df.rename(columns=lambda x: "".join([i for i in x if i.isalpha()]), inplace=True)
 
-    with sqlite3.connect(config.db) as con:
+    with sqlite3.connect(instance.config.db) as con:
         df.to_sql(symbol, con, if_exists="replace")
         con.commit()
 
 
-def parse_args(args):
-    """Parse args. Retuns a Namespace object."""
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-k", "--apikey", required=True, help="Must use apikey")
-    parser.add_argument(
-        "-s",
-        "--symbols",
-        help="Name of file containing the stocks we shall fetch",
-        default="./NDX",
-    )
-    parser.add_argument("--daily", help="Fetch daily history", action="store_true")
-    parser.add_argument(
-        "--hourly", help="Fetch intraday history by the hour", action="store_true"
-    )
-    return parser.parse_args(args)
-
-
 def main():
     """Do everythong"""
-
-    args = parse_args(sys.argv[1:])
-
-    config = Config(
-        ALPHA_VANTAGE_API_URL,
-        DATEFORMAT,
-        TIMEFORMAT,
-        "Time Series (Daily)" if args.daily else "Time Series (60min)",
-        "test.db",
-    )
-
-    av = Collector(args, config)
-    with open(args.symbols, "r") as symbols:
+    av = Collector()
+    with open(av.config.symbols, "r") as symbols:
         for s in symbols:
             payload = av.collect_data(s.strip())
             df = payload_to_dataframe(payload)
-            store_data(df, s.strip(), config)
+            store_data(df, s.strip(), av)
             time.sleep(13)  # Let's limit ourselves to 4-5 API calls a minute
 
 

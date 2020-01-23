@@ -1,36 +1,45 @@
 #!/usr/bin/env python3
 
-import sqlite3 as db
+import os
 import pandas as pd
+import matplotlib
 import matplotlib.pyplot as plt
 import seaborn
+import db_operations as db
+import mpld3
 
 
-def get_dataframe(symbol):
-    with db.connect("test.db") as con:
-        df = pd.read_sql(f"SELECT * FROM {symbol};", con, index_col="index")
-    df["date"] = pd.to_datetime(df.index)
-    return df.set_index("date")
-
-
-def print_plot(dfs, symbols):
-    df = dfs.pop(list(dfs.keys())[0])[::-1]
-    ax = df.close.plot()
+def make_plot(dfs):
+    plt.figure()
+    seaborn.set()
+    symbol = list(dfs.keys())[0]
+    df = dfs.pop(symbol)[::-1]
+    matplotlib.use("agg")
+    ax = df.close.plot(label=symbol)
     for symbol in dfs:
         df = dfs[symbol]
-        axis = df[::-1].close.plot(kind="line", ax=ax)
-    plt.legend(symbols)
-    plt.show()
+        df[::-1].close.plot(kind="line", label=symbol, ax=ax)
+    return plt
+
+
+def print_plot(dfs):
+    fig = make_plot(dfs)
+    fig.show()
+
+
+def plot_to_html(dfs):
+    matplotlib.use("agg")
+    fig = make_plot(dfs).gcf()
+    plt.legend()
+    return mpld3.fig_to_html(fig)
 
 
 def main():
-    symbols = ["AMZN", "AAPL", "FB", "GOOG"]
+    symbols = os.getenv("ENNY_SYMBOLS_TO_GRAPH", ["AAPL", "FB"])
     dfs = {}
-    plt.figure()
-    seaborn.set()
     for symbol in symbols:
-        dfs[symbol] = get_dataframe(symbol)
-    print_plot(dfs, symbols)
+        dfs[symbol] = db.get_dataframe(symbol)
+    print_plot(dfs)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Stonks!</title>
+</head>
+
+<body>
+<h1>{{data.title}}</h1>
+<form action="/api/v1.0/graph/">
+  {% for e in data.fields %}
+     <input type="checkbox" name="field" value="{{ e }}"> {{ e }}<br>
+  {% endfor %}
+  <input type="submit" value="Vote" />
+
+</form>
+</body>
+</html>

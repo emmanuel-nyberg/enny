@@ -13,6 +13,8 @@ requests-mock = "*"
 pandas = "*"
 matplotlib = "*"
 seaborn = "*"
+flask = "*"
+mpld3 = "*"
 
 [requires]
 python_version = "3.7"
