@@ -16,7 +16,7 @@ TIMEFORMAT = "%H:%M:%S"
 
 class Collector:
     """This class will act as a collector, giving access to the Alpha Vantage API.
-    Its methods return the recieved JSON."""
+    It is configured by environment variables and will return a JSON object."""
 
     def __init__(self):
         self.config = self._parse_env()
