@@ -9,8 +9,8 @@ black = "*"
 [packages]
 requests = "*"
 pylint = "*"
-datatable = "*"
 requests-mock = "*"
+pandas = "*"
 
 [requires]
 python_version = "3.7"

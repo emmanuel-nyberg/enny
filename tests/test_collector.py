@@ -5,6 +5,7 @@ from urllib.error import HTTPError
 import json
 import collector
 import requests_mock
+import pandas.core
 
 
 class TestCollectorMainMethods(unittest.TestCase):
@@ -23,6 +24,7 @@ class TestCollectorMethods(unittest.TestCase):
             collector.DATEFORMAT,
             collector.TIMEFORMAT,
             "Time Series (Daily)" if self.args.daily else "Time Series (60min)",
+            "",
         )
         self.av = collector.Collector(self.args, self.config)
         with open("tests/sample_data.json", "r") as self.sample_data_file:
@@ -38,7 +40,7 @@ class TestCollectorMethods(unittest.TestCase):
             pass
 
     def test_normalizer(self):
-        prettified_data = self.av._prettify_dict(self.sample_data, "AAPL")
+        prettified_data = self.av._prettify_dict(self.sample_data)
         self.assertIn("timeseries", prettified_data)
         self.assertIn("metadata", prettified_data)
         self.assertNotIn("Meta Data", prettified_data)
@@ -49,7 +51,7 @@ class TestCollectorMethods(unittest.TestCase):
 
     @requests_mock.Mocker()
     def test_api_call(self, mock_request):
-        config = collector.Config("mock://test.url/404", "", "", "")
+        config = collector.Config("mock://test.url/404", "", "", "", "")
         av_404 = collector.Collector(self.args, config)
         mock_request.get(
             "mock://test.url", json=self.sample_data, status_code=200,
@@ -73,3 +75,13 @@ class TestCollectorMethods(unittest.TestCase):
             "mock://test.url", json=self.sample_data, status_code=200,
         )
         self.assertIn("metadata", self.av.collect_data("AAPL"))
+
+    @requests_mock.Mocker()
+    def test_payload_to_data(self, mock_request):
+        mock_request.get(
+            "mock://test.url", json=self.sample_data, status_code=200,
+        )
+        self.assertIsInstance(
+            collector.payload_to_dataframe(self.av.collect_data("AAPL")),
+            pandas.core.frame.DataFrame,
+        )
