@@ -23,8 +23,14 @@ def ticker(symbol):
 def graph():
     """This method will return a graph as HTML. It takes all input from the Flask request object."""
     dfs = {}
-    chart_from = request.args.get("from", default="2000-01-01")
-    chart_to = request.args.get("to", default=date.today())
+    if request.args.get("from"):
+        chart_from = request.args.get("from")
+    else:
+        chart_from = "2000-01-01"
+    if request.args.get("to"):
+        chart_to = request.args.get("to")
+    else:
+        chart_to = date.today()
     for symbol in request.args.getlist("field"):
         dfs[symbol.strip()] = db.get_dataframe(symbol.strip())
     return grapher.plot_to_html(dfs, chart_from=chart_from, chart_to=chart_to)

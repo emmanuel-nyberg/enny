@@ -24,7 +24,7 @@ def make_plot(dfs, **kwargs):
     ax = df[chart_from:chart_to].close.plot(label=symbol)
     for symbol in dfs:
         df = dfs[symbol]
-        df[chart_to:chart_from:-1].close.plot(kind="line", label=symbol, ax=ax)
+        df[chart_from:chart_to:-1].close.plot(kind="line", label=symbol, ax=ax)
     return plt
 
 
