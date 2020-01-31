@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import seaborn
 import mpld3
 import db_operations as db
+import configure
 
 
 def make_plot(dfs, **kwargs):
@@ -43,11 +44,13 @@ def plot_to_html(dfs, **kwargs):
 
 
 def main():
-    """If you want to run this program from the command line, you can supply a list of symbols to graph with an environment variable."""
+    """If you want to run this program from the command line, you can supply a list of symbols
+    to graph with an environment variable."""
     symbols = os.getenv("ENNY_SYMBOLS_TO_GRAPH", ["AAPL", "FB"])
+    config = configure.parse_env()
     dfs = {}
     for symbol in symbols:
-        dfs[symbol] = db.get_dataframe(symbol)
+        dfs[symbol] = db.get_dataframe(symbol, config)
     print_plot(dfs)
 
 

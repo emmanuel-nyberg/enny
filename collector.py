@@ -1,17 +1,12 @@
 #!/usr/bin/env python3
 
-import os
 import json
 import time
-from collections import namedtuple
-import sqlite3
 from urllib.error import HTTPError
 import requests
 import pandas as pd
-
-ALPHA_VANTAGE_API_URL = "https://www.alphavantage.co/query?"
-DATEFORMAT = "%Y-%m-%d"
-TIMEFORMAT = "%H:%M:%S"
+import db_operations as db
+import configure
 
 
 class Collector:
@@ -19,27 +14,7 @@ class Collector:
     It is configured by environment variables and will return a JSON object."""
 
     def __init__(self):
-        self.config = self._parse_env()
-
-    def _parse_env(self):
-
-        """Parse config. Retuns a Config NamedTuple."""
-        Config = namedtuple(
-            "Config",
-            ["url", "dateformat", "timeformat", "ts_key", "db", "symbols", "apikey",],
-        )
-        config = Config(
-            os.getenv("ENNY_API_URL", ALPHA_VANTAGE_API_URL),
-            os.getenv("ENNY_DATEFORMAT", DATEFORMAT),
-            os.getenv("ENNY_TIMEFORMAT", TIMEFORMAT),
-            "Time Series (60min)"
-            if os.getenv("ENNY_HOURLY")
-            else "Time Series (Daily)",
-            os.getenv("ENNY_DATABASE", "./test.db"),
-            os.getenv("ENNY_SYMBOLFILE", "./NDX"),
-            os.getenv("ENNY_APIKEY"),
-        )
-        return config
+        self.config = configure.parse_env()
 
     def _generate_parameters(self, symbol):
         params = {"symbol": symbol, "outputsize": "full", "apikey": self.config.apikey}
@@ -90,14 +65,15 @@ def payload_to_dataframe(payload):
     return pd.read_json(json.dumps(payload["timeseries"]), orient="index")
 
 
-def store_data(df, symbol, instance):
-    """Store the data in a SQL database.
-        TODO: Set up a real db. instead of sqlite3 files."""
-    df.rename(columns=lambda x: "".join([i for i in x if i.isalpha()]), inplace=True)
-
-    with sqlite3.connect(instance.config.db) as con:
-        df.to_sql(symbol, con, if_exists="replace")
-        con.commit()
+def collect(symbol):
+    av = Collector()
+    try:
+        payload = av.collect_data(symbol)
+        df = payload_to_dataframe(payload)
+        db.store_data(df, symbol, av)
+        return {"msg": f"Collected {symbol}."}
+    except:
+        return {"error": f"Failed at collecting {symbol}."}
 
 
 def main():
@@ -105,9 +81,7 @@ def main():
     av = Collector()
     with open(av.config.symbols, "r") as symbols:
         for s in symbols:
-            payload = av.collect_data(s.strip())
-            df = payload_to_dataframe(payload)
-            store_data(df, s.strip(), av)
+            collect(s.strip())
             time.sleep(13)  # Let's limit ourselves to 4-5 API calls a minute
 
 

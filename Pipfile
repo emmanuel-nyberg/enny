@@ -15,6 +15,10 @@ matplotlib = "*"
 seaborn = "*"
 flask = "*"
 mpld3 = "*"
+zappa = "*"
+sqlalchemy = "*"
+pymysql = "*"
+sqlalchemy-utils = "*"
 
 [requires]
 python_version = "3.7"
