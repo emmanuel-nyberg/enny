@@ -3,3 +3,4 @@ apikey
 .vscode
 __pycache__
 *.json
+test.db

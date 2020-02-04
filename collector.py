@@ -1,34 +1,26 @@
 #!/usr/bin/env python3
 
-import argparse
 import json
 import time
-from collections import namedtuple
-import sys
-import sqlite3
 from urllib.error import HTTPError
 import requests
 import pandas as pd
-
-ALPHA_VANTAGE_API_URL = "https://www.alphavantage.co/query?"
-DATEFORMAT = "%Y-%m-%d"
-TIMEFORMAT = "%H:%M:%S"
-Config = namedtuple("Config", ["url", "dateformat", "timeformat", "ts_key", "db"])
+import db_operations as db
+import configure
 
 
 class Collector:
     """This class will act as a collector, giving access to the Alpha Vantage API.
-    Its methods return the recieved JSON."""
+    It is configured by environment variables and will return a JSON object."""
 
-    def __init__(self, args, config):
-        self.args = args
-        self.config = config
+    def __init__(self):
+        self.config = configure.parse_env()
 
     def _generate_parameters(self, symbol):
-        params = {"symbol": symbol, "outputsize": "full", "apikey": self.args.apikey}
-        if self.args.hourly:
+        params = {"symbol": symbol, "outputsize": "full", "apikey": self.config.apikey}
+        if "60min" in self.config.ts_key:
             params.update({"interval": "60min", "function": "TIME_SERIES_INTRADAY"})
-        elif self.args.daily:
+        elif "Daily" in self.config.ts_key:
             params.update({"function": "TIME_SERIES_DAILY"})
         else:
             raise Exception("Either hourly or daily should be defined")
@@ -73,51 +65,23 @@ def payload_to_dataframe(payload):
     return pd.read_json(json.dumps(payload["timeseries"]), orient="index")
 
 
-def store_data(df, symbol, config):
-    """Store the data in a SQL database.
-        TODO: Set up a real db. instead of sqlite3 files."""
-    with sqlite3.connect(config.db) as con:
-        df.to_sql(
-            symbol, con, if_exists="replace", index=True,
-        )
-
-
-def parse_args(args):
-    """Parse args. Retuns a Namespace object."""
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-k", "--apikey", required=True, help="Must use apikey")
-    parser.add_argument(
-        "-s",
-        "--symbols",
-        help="Name of file containing the stocks we shall fetch",
-        default="./NDX",
-    )
-    parser.add_argument("--daily", help="Fetch daily history", action="store_true")
-    parser.add_argument(
-        "--hourly", help="Fetch intraday history by the hour", action="store_true"
-    )
-    return parser.parse_args(args)
+def collect(symbol):
+    av = Collector()
+    try:
+        payload = av.collect_data(symbol)
+        df = payload_to_dataframe(payload)
+        db.store_data(df, symbol, av)
+        return {"msg": f"Collected {symbol}."}
+    except:
+        return {"error": f"Failed at collecting {symbol}."}
 
 
 def main():
     """Do everythong"""
-
-    args = parse_args(sys.argv[1:])
-
-    config = Config(
-        ALPHA_VANTAGE_API_URL,
-        DATEFORMAT,
-        TIMEFORMAT,
-        "Time Series (Daily)" if args.daily else "Time Series (60min)",
-        "test.db",
-    )
-
-    av = Collector(args, config)
-    with open(args.symbols, "r") as symbols:
+    av = Collector()
+    with open(av.config.symbols, "r") as symbols:
         for s in symbols:
-            payload = av.collect_data(s.strip())
-            df = payload_to_dataframe(payload)
-            store_data(df, s, config)
+            collect(s.strip())
             time.sleep(13)  # Let's limit ourselves to 4-5 API calls a minute
 
 
