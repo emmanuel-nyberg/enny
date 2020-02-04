@@ -6,6 +6,7 @@ import db_operations as db
 import visualizer as grapher
 import collector
 import configure
+import analyzer as meth
 
 app = Flask(__name__)
 
@@ -49,6 +50,7 @@ def graph():
     """This method will return a graph as HTML. It takes all input from the Flask request object."""
     config = configure.parse_env()
     dfs = {}
+    method = getattr(meth, request.args.get("method"))
     # For some reason, providing a default value to args.get didn't work as expected.
     if request.args.get("from"):
         chart_from = request.args.get("from")
@@ -59,7 +61,7 @@ def graph():
     else:
         chart_to = date.today()
     for symbol in request.args.getlist("field"):
-        dfs[symbol.strip()] = db.get_dataframe(symbol.strip(), config)
+        dfs[symbol.strip()] = method(db.get_dataframe(symbol.strip(), config))
     return grapher.plot_to_html(dfs, chart_from=chart_from, chart_to=chart_to)
 
 
