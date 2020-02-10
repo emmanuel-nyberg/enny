@@ -1,7 +1,9 @@
+import pdb
 import os
 from datetime import date
 from multiprocessing import Process
 from flask import Flask, render_template, request, abort
+import pandas as pd
 import db_operations as db
 import visualizer as grapher
 import collector
@@ -9,6 +11,7 @@ import configure
 import analyzer as meth
 
 app = Flask(__name__)
+config = configure.parse_env()
 
 
 @app.route("/api/v1.0/collector/collect_all")
@@ -28,14 +31,12 @@ def collect(symbol):
 
 @app.route("/api/v1.0/conf")
 def show_conf():
-    config = configure.parse_env()
     return {"conf": config}
 
 
 @app.route("/api/v1.0/ticker/<symbol>", methods=["GET"])
 def ticker(symbol,):
     """Get a dataframe as JSON"""
-    config = configure.parse_env()
     if len(symbol) == 0:
         abort(404)
     try:
@@ -45,24 +46,35 @@ def ticker(symbol,):
     return df.to_json()
 
 
+@app.route("/api/v1.0/analysis/<method>/<symbol>")
+def analyze(method, symbol):
+    """Transform time series in some manner."""
+    dfs = {}
+    method = getattr(meth, method)
+    # For some reason, providing a default value to args.get didn't work as expected.
+    if request.args.get("from"):
+        chart_from = pd.to_datetime(request.args.get("from"))
+    else:
+        chart_from = pd.to_datetime(date(2000, 1, 1))
+    if request.args.get("to"):
+        chart_to = pd.to_datetime(request.args.get("to"))
+    else:
+        chart_to = pd.to_datetime(date.today())
+    return method(db.get_dataframe(symbol.strip(), config))[
+        chart_from:chart_to:-1
+    ].to_json()
+
+
 @app.route("/api/v1.0/graph/")
 def graph():
     """This method will return a graph as HTML. It takes all input from the Flask request object."""
-    config = configure.parse_env()
     dfs = {}
     method = getattr(meth, request.args.get("method"))
     # For some reason, providing a default value to args.get didn't work as expected.
-    if request.args.get("from"):
-        chart_from = request.args.get("from")
-    else:
-        chart_from = "2000-01-01"
-    if request.args.get("to"):
-        chart_to = request.args.get("to")
-    else:
-        chart_to = date.today()
+    pdb.set_trace()
     for symbol in request.args.getlist("field"):
-        dfs[symbol.strip()] = method(db.get_dataframe(symbol.strip(), config))
-    return grapher.plot_to_html(dfs, chart_from=chart_from, chart_to=chart_to)
+        dfs[symbol.strip()] = analyze(method, symbol.strip())
+    return grapher.plot_to_html(dfs)
 
 
 @app.route("/")

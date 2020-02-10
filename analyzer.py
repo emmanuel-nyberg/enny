@@ -1,8 +1,5 @@
-import pandas
-
-
 def closing_value(df):
-    return df.close[::-1]
+    return df.close
 
 
 def cumulative_returns(df):
@@ -10,8 +7,8 @@ def cumulative_returns(df):
 
 
 def daily_returns(df):
-    return df[::-1].close.pct_change()
+    return df.close.pct_change()
 
 
 def monthly_returns(df):
-    return df[::-1].close.resample("M").ffill().pct_change()
+    return df.close.resample("M").ffill().pct_change()
