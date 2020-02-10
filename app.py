@@ -1,4 +1,3 @@
-import pdb
 import os
 from datetime import date
 from multiprocessing import Process
@@ -71,7 +70,6 @@ def graph():
     dfs = {}
     method = getattr(meth, request.args.get("method"))
     # For some reason, providing a default value to args.get didn't work as expected.
-    pdb.set_trace()
     for symbol in request.args.getlist("field"):
         dfs[symbol.strip()] = analyze(method, symbol.strip())
     return grapher.plot_to_html(dfs)
