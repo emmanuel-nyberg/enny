@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import os
 from datetime import date
 import pandas as pd
@@ -15,15 +14,13 @@ def make_plot(timeseries, **kwargs):
     """ Get a dataframe and optionally a to and from-date and return a Matplotlib plot object """
     plt.figure(figsize=(10, 8))
     seaborn.set()
-    chart_from = pd.to_datetime(kwargs.get("chart_from", "2000-01-01"))
-    chart_to = pd.to_datetime(kwargs.get("chart_to", date.today()))
     symbol = list(timeseries.keys())[0]
-    df = timeseries.pop(symbol)
+    df = pd.read_json(timeseries.pop(symbol))
     matplotlib.use("agg")
-    ax = df[chart_from:chart_to].plot(label=symbol)
+    ax = df.plot(label=symbol)
     for symbol in timeseries:
-        df = timeseries[symbol]
-        df[chart_from:chart_to].plot(kind="line", label=symbol, ax=ax)
+        df = pd.read_json(timeseries[symbol])
+        df.plot(kind="line", label=symbol, ax=ax)
     return plt
 
 

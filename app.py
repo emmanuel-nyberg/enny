@@ -11,9 +11,10 @@ import analyzer as meth
 
 app = Flask(__name__)
 config = configure.parse_env()
+API_VERSION = f"/api/v{config.api_version}"
 
 
-@app.route("/api/v1.0/collector/collect_all")
+@app.route(f"{API_VERSION}/collector/collect_all")
 def collect_all():
     """This will only work for all symbols if enny is hosted outside of Lambda
     as the container will kill itself before completion."""
@@ -22,34 +23,49 @@ def collect_all():
     return "Collecting."
 
 
-@app.route("/api/v1.0/collector/collect/<symbol>", methods=["GET"])
+@app.route(f"{API_VERSION}/collector/collect/<symbol>", methods=["GET"])
 def collect(symbol):
     """Get a stock from AV."""
     return collector.collect(symbol)
 
 
-@app.route("/api/v1.0/conf")
+@app.route(f"{API_VERSION}/conf")
 def show_conf():
     return {"conf": config}
 
 
-@app.route("/api/v1.0/ticker/<symbol>", methods=["GET"])
+@app.route(f"{API_VERSION}/timeline", methods=["GET", "POST"])
+def timeline():
+    """POST will set the start of the timeline to "now", GET will get the "current time"."""
+    if request.method == "POST":
+        if request.args.get("hours"):
+            result = db.set_starting_time(config, hours=request.args.get("hours"))
+        else:
+            result = db.set_starting_time(config)
+            if result.rowcount == 1:
+                return {"msg": "Updated starting time or hours til now"}
+            else:
+                return {"msg": "Didn't update anything"}
+    if request.method == "GET":
+        return {"date": str(db.get_simulated_date(config))}
+
+
+@app.route(f"{API_VERSION}/ticker/<symbol>", methods=["GET"])
 def ticker(symbol,):
-    """Get a dataframe as JSON"""
+    """Get a dataframe as JSON. Note that datetime objects will be converted to UNIX timestamps and 
+    NaN and None values will be null."""
     if len(symbol) == 0:
         abort(404)
     try:
         df = db.get_dataframe(symbol, config)
     except:
         abort(404)
-    return df.to_json()
+    return df[pd.to_datetime(db.get_simulated_date(config)) :: -1].to_json()
 
 
-@app.route("/api/v1.0/analysis/<method>/<symbol>")
+@app.route(f"{API_VERSION}/analysis/<method>/<symbol>")
 def analyze(method, symbol):
     """Transform time series in some manner."""
-    dfs = {}
-    method = getattr(meth, method)
     # For some reason, providing a default value to args.get didn't work as expected.
     if request.args.get("from"):
         chart_from = pd.to_datetime(request.args.get("from"))
@@ -58,13 +74,13 @@ def analyze(method, symbol):
     if request.args.get("to"):
         chart_to = pd.to_datetime(request.args.get("to"))
     else:
-        chart_to = pd.to_datetime(date.today())
+        chart_to = pd.to_datetime(db.get_simulated_date(config))
     return method(db.get_dataframe(symbol.strip(), config))[
         chart_from:chart_to:-1
     ].to_json()
 
 
-@app.route("/api/v1.0/graph/")
+@app.route(f"{API_VERSION}/graph/")
 def graph():
     """This method will return a graph as HTML. It takes all input from the Flask request object."""
     dfs = {}
