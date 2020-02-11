@@ -14,6 +14,7 @@ import pandas as pd
 
 
 def get_connection_string(config, db_name):
+    """This will be used by the SQLAlchemy engine"""
     return "mysql+pymysql://{}:{}@{}:{}/{}".format(
         config.db_user, config.db_password, config.db_host, config.db_port, db_name,
     )
@@ -46,6 +47,8 @@ def store_data(df, symbol, instance):
 
 
 def set_starting_time(config, **kwargs):
+    """Set starting time and length in hours for the simulated timeline. If hours is omitted, it will
+    default to the configuration variable. If that is non-existant, it's 6."""
     engine = create_engine(get_connection_string(config, "time_machine"))
     if not database_exists(engine.url):
         create_database(engine.url)
@@ -78,6 +81,8 @@ def set_starting_time(config, **kwargs):
 
 
 def get_starting_time(config):
+    """Get starting time and length of the simulated timeline. Returns a tuple of a date and an integer.
+    Starting time is always at ID 1."""
     engine = create_engine(get_connection_string(config, "time_machine"))
     with engine.connect() as con:
         query = sql.text(
@@ -88,6 +93,7 @@ def get_starting_time(config):
 
 
 def get_simulated_date(config):
+    """Returns a datetime object."""
     starting_time, hours = get_starting_time(config)
     days_per_minute = (
         (starting_time.date() - datetime.date(2000, 1, 1)) / (hours * 60)

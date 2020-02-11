@@ -14,6 +14,16 @@ config = configure.parse_env()
 API_VERSION = f"/api/v{config.api_version}"
 
 
+@app.before_first_request
+def set_timeline(request=None):
+    """This guy is run when app is started. Returns the number of rows affected."""
+    if request and request.args.get("hours"):
+        result = db.set_starting_time(config, hours=request.args.get("hours"))
+    else:
+        result = db.set_starting_time(config)
+    return result.rowcount
+
+
 @app.route(f"{API_VERSION}/collector/collect_all")
 def collect_all():
     """This will only work for all symbols if enny is hosted outside of Lambda
@@ -31,6 +41,7 @@ def collect(symbol):
 
 @app.route(f"{API_VERSION}/conf")
 def show_conf():
+    """This endpoint is solely for admin purposes. Should be protected."""
     return {"conf": config}
 
 
@@ -38,14 +49,11 @@ def show_conf():
 def timeline():
     """POST will set the start of the timeline to "now", GET will get the "current time"."""
     if request.method == "POST":
-        if request.args.get("hours"):
-            result = db.set_starting_time(config, hours=request.args.get("hours"))
+        result = set_timeline(request=request)
+        if result == 1:
+            return {"msg": "Updated starting time or hours til now"}
         else:
-            result = db.set_starting_time(config)
-            if result.rowcount == 1:
-                return {"msg": "Updated starting time or hours til now"}
-            else:
-                return {"msg": "Didn't update anything"}
+            return {"msg": "Didn't update anything"}
     if request.method == "GET":
         return {"date": str(db.get_simulated_date(config))}
 
@@ -65,7 +73,7 @@ def ticker(symbol,):
 
 @app.route(f"{API_VERSION}/analysis/<method>/<symbol>")
 def analyze(method, symbol):
-    """Transform time series in some manner."""
+    """Transform time series in some manner. If no chart_to argument is provided, simulated "now" will be used."""
     # For some reason, providing a default value to args.get didn't work as expected.
     if request.args.get("from"):
         chart_from = pd.to_datetime(request.args.get("from"))

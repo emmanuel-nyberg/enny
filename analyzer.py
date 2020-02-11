@@ -1,3 +1,6 @@
+"""In order to get dataframes instead of Series from pandas, we need to ask for a list index"""
+
+
 def closing_value(df):
     return df[["close"]]
 
