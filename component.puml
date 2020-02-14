@@ -1,19 +1,15 @@
 @startuml
 
 title Components
+box "AWS"
+    participant Lambda
+    participant Database as DB
+end box
 
-[Data Collector] as DC
-[Data Validator] as DV  
-[Data Normalisator] as DN
-
-[Data store] as DS
-
-DC <- (Alpha Vantage)
-note right of (Alpha Vantage): This should be interchangable
-DC -- DV
-DV -- DN
-
-DN .. DS
-note right of DS: If huge, maybe a DataTable?
+box "The Internet"
+participant "Alpha Vantage" as AV
+end box
+Lambda <-> DB
+Lambda <- AV
 
 @enduml

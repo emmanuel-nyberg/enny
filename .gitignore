@@ -3,4 +3,5 @@ apikey
 .vscode
 __pycache__
 *.json
+zappa_settings.json
 test.db
