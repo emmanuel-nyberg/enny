@@ -2,6 +2,5 @@ apikey
 .pylintrc
 .vscode
 __pycache__
-*.json
-zappa_settings.json
+.venv
 test.db

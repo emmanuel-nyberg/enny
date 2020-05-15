@@ -35,10 +35,10 @@ def parse_env():
         os.getenv("ENNY_APIKEY"),
         os.getenv("ENNY_API_VERSION", "1.0"),
         os.getenv("ENNY_HOURS", 6),
-        os.getenv("ENNY_DB_USER", "enny"),
-        os.getenv("ENNY_DB_PASSWORD"),
-        os.getenv("ENNY_DB_HOST"),
-        os.getenv("ENNY_DB_PORT", 3306),
+        os.getenv("ENNY_DB_USER", "postgres"),
+        os.getenv("ENNY_DB_PASSWORD", "LocalPassword"),
+        os.getenv("ENNY_DB_HOST", "db"),
+        os.getenv("ENNY_DB_PORT", 5432),
         os.getenv("ENNY_DB_NAME", "enny"),
     )
     return config

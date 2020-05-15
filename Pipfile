@@ -15,13 +15,12 @@ matplotlib = "*"
 seaborn = "*"
 flask = "*"
 mpld3 = "*"
-zappa = "*"
 sqlalchemy = "*"
-pymysql = "*"
 sqlalchemy-utils = "*"
+psycopg2 = "*"
 
 [requires]
-python_version = "3.7"
+python_version = "3.8"
 
 [pipenv]
 allow_prereleases = true

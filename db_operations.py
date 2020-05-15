@@ -15,7 +15,7 @@ import pandas as pd
 
 def get_connection_string(config, db_name):
     """This will be used by the SQLAlchemy engine"""
-    return "mysql+pymysql://{}:{}@{}:{}/{}".format(
+    return "postgresql://{}:{}@{}:{}/{}".format(
         config.db_user, config.db_password, config.db_host, config.db_port, db_name,
     )
 
@@ -25,7 +25,7 @@ def get_dataframe(symbol, config):
     connection_string = get_connection_string(config, config.db_name)
     try:
         con = create_engine(connection_string)
-        df = pd.read_sql(f"SELECT * FROM {symbol};", con, index_col="index")
+        df = pd.read_sql(f"SELECT * FROM \"{symbol}\";", con, index_col="index")
     except:
         raise
     df["date"] = pd.to_datetime(df.index)
