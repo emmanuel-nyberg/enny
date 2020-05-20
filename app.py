@@ -74,7 +74,7 @@ def ticker(symbol,):
 @app.route(f"{API_VERSION}/analysis/<method>/<symbol>")
 def analyze(method, symbol):
     """Transform time series in some manner. If no chart_to argument is provided, simulated "now" will be used."""
-    # For some reason, providing a default value to args.get didn't work as expected.
+    # For some reason, providing a default value to args.get didn't work as expected. Kakaself.
     if request.args.get("from"):
         chart_from = pd.to_datetime(request.args.get("from"))
     else:
@@ -98,6 +98,11 @@ def graph():
         dfs[symbol.strip()] = analyze(method, symbol.strip())
     return grapher.plot_to_html(dfs)
 
+
+@app.route("/health")
+def health_check():
+    """Return a 200 OK."""
+    return "OK"
 
 @app.route("/")
 def root():
