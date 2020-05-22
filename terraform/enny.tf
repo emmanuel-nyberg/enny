@@ -6,6 +6,17 @@ resource "azurerm_resource_group" "enny" {
     name = "enny_resource_group"
     location = "North Europe"
 }
+
+data "azurerm_key_vault" "ennydb" {
+  name                = "enny-keys"
+  resource_group_name = azurerm_resource_group.enny.name 
+}
+
+data "azurerm_key_vault_secret" "ennydb" {
+  name = "enny-db-password"
+  key_vault_id = data.azurerm_key_vault.ennydb.id
+}
+
 resource "azurerm_postgresql_server" "ennydb" {
     name = "ennydb"
     resource_group_name = "enny_resource_group"
@@ -13,8 +24,7 @@ resource "azurerm_postgresql_server" "ennydb" {
     sku_name = "B_Gen5_1"
     version = "10"
     administrator_login = "postgres"
-    # Obviously not a real password
-    administrator_login_password = "53cr37"
+    administrator_login_password = data.azurerm_key_vault_secret.ennydb.value
     ssl_enforcement_enabled = false
     storage_mb            = 5120
     backup_retention_days = 7
