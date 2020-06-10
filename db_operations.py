@@ -28,6 +28,8 @@ def get_dataframe(symbol, config):
         df = pd.read_sql(f"SELECT * FROM \"{symbol}\";", con, index_col="index")
     except:
         raise
+    finally:
+        con.dispose()
     df["date"] = pd.to_datetime(df.index)
     return df.set_index("date")
 
@@ -44,6 +46,8 @@ def store_data(df, symbol, instance):
         df.to_sql(symbol, con, if_exists="replace")
     except:
         raise
+    finally:
+        con.dispose()
 
 
 def set_starting_time(config, **kwargs):
