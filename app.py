@@ -47,8 +47,11 @@ def show_conf():
 
 @app.route(f"{API_VERSION}/timeline/help")
 def timeline_help():
-    return render_template('help.html', 
-    text='POST will set the start of the timeline to "now", GET will get the "current time"')
+    return render_template(
+        "help.html",
+        text='POST will set the start of the timeline to "now", GET will get the "current time"',
+    )
+
 
 @app.route(f"{API_VERSION}/timeline", methods=["GET", "POST"])
 def timeline():
@@ -75,6 +78,7 @@ def ticker(symbol,):
         abort(404)
     return df[pd.to_datetime(db.get_simulated_date(config)) :: -1].to_json()
 
+
 @app.route(f"{API_VERSION}/ticker/<symbol>/today", methods=["GET"])
 def today(symbol,):
     """Get a dataframe as JSON. Note that datetime objects will be converted to UNIX timestamps and 
@@ -82,10 +86,11 @@ def today(symbol,):
     if len(symbol) == 0:
         abort(404)
     try:
-        df = db.get_dataframe(symbol, config)
+        df = db.get_single_day(symbol, db.get_simulated_date(config), config)
     except:
         abort(404)
-    return df[pd.to_datetime(db.get_simulated_date(config)) :: -1].tail(1).to_json()
+    return df.to_json()
+
 
 @app.route(f"{API_VERSION}/analysis/<method>/<symbol>")
 def analyze(method, symbol):
@@ -119,6 +124,7 @@ def graph():
 def health_check():
     """Return a 200 OK."""
     return "OK"
+
 
 @app.route("/")
 def root():

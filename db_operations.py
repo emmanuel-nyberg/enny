@@ -19,13 +19,26 @@ def get_connection_string(config, db_name):
         config.db_user, config.db_password, config.db_host, config.db_port, db_name,
     )
 
+def get_single_day(symbol, timestamp, config):
+    """Takes a symbol and a ISO 8601 date, returns a single day of trading."""
+    connection_string = get_connection_string(config, config.db_name)
+    try:
+        con = create_engine(connection_string)
+        df = pd.read_sql(f'SELECT * FROM "{symbol}" WHERE index = to_timestamp(\'{timestamp}\', \'YYYY-MM-DD\')::timestamp without time zone;', con, index_col="index")
+    except:
+        raise
+    finally:
+        con.dispose()
+    df["date"] = pd.to_datetime(df.index)
+    return df.set_index("date")
+
 
 def get_dataframe(symbol, config):
     """This function takes a symbol as input and returns a Pandas dataframe, indexed by date."""
     connection_string = get_connection_string(config, config.db_name)
     try:
         con = create_engine(connection_string)
-        df = pd.read_sql(f"SELECT * FROM \"{symbol}\";", con, index_col="index")
+        df = pd.read_sql(f'SELECT * FROM "{symbol}";', con, index_col="index")
     except:
         raise
     finally:
