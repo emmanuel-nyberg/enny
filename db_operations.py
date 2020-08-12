@@ -113,8 +113,8 @@ def get_simulated_date(config):
     """Returns a datetime object."""
     starting_time, hours = get_starting_time(config)
     days_per_minute = (
-        (starting_time.date() - datetime.date(2000, 1, 1)) / (hours * 60)
+        (starting_time.date() - datetime.date(2001, 1, 1)) / (hours * 60)
     ).days
     delta = (datetime.datetime.now() - starting_time).seconds / 60
     timedelta = datetime.timedelta(days=(delta * days_per_minute))
-    return datetime.date(2000, 1, 1) + timedelta
+    return datetime.date(2001, 1, 1) + timedelta

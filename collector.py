@@ -72,10 +72,10 @@ def collect(symbol):
     try:
         payload = av.collect_data(symbol)
         df = payload_to_dataframe(payload)
-        db.store_data(df, symbol, av)
+        db.store_data(df.resample('D').interpolate(), symbol, av)
         return {"msg": f"Collected {symbol}."}
-    except:
-        return {"error": f"Failed at collecting {symbol}."}
+    except Exception as e:
+        return {"error": f"Failed at collecting {symbol}. /n{e}"}
 
 
 def main():

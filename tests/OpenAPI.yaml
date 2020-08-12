@@ -1,0 +1,137 @@
+openapi: 3.0.0
+info:
+  title: Enny trading bot
+  version: "1.0"
+
+servers:
+  - url: http://localhost:5000/api/v1.0/
+    description: Local devcontainer setup.
+  - url: https://enny.azurewebsites.net/api/v1.0/
+    description: Staging server also used as prod environment :)
+
+paths:
+  /help:
+    get:
+      summary: Show this specification.
+  /collector/collect_all:
+    get:
+      summary: Collects all stocks from all data sources
+      responses:
+        '200':
+          description: Will continue collecting in the background.
+  /collector/collect/{symbol}:
+    get:
+      summary: Collect history for a certain stock.
+  /conf:
+    get:
+      summary: Get an object describing the app's configuration.
+      responses:
+        '200':
+          description: Will give us the app configuration for debug purposes. Should be protected.
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/conf'
+            
+  /timeline:
+    get:
+      summary: Get the current simulated time.
+      responses:
+        '200':
+          description: current date
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/date'
+    post:
+      summary: Set the starting date to NOW.
+      content:
+        application/json:
+          
+    
+  /ticker/{symbol}:
+    get:
+      summary: Get the open, close, high. low and volume values for a stock as a time series.
+      responses:
+        '200':
+          description: Timeseries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ts'
+
+              
+        
+  /analysis/{method}/{symbol}:
+    get:
+      summary: Transform a time series in some way according to {method}
+      responses:
+        '200':
+          description: Timeseries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ts'
+  /health:
+    get:
+      summary: Get the health of the application
+      responses:
+        '200':
+          description: OK!
+        '404':
+          description: Broken.
+          
+components:
+  schemas:
+    ts:
+      type: object
+      properties:
+        "point in time":
+          type: object
+          properties:
+            open:
+              type: number
+            close:
+              type: number
+            high:
+              type: number
+            low:
+              type: number
+            volume:
+              type: number
+
+    date:
+      type: object
+      properties:
+        date:
+          type: integer
+
+    conf:
+      type: object
+      properties:
+        "url":
+          type: string
+        "dateformat":
+          type: string
+        "timeformat":
+          type: string
+        "ts_key":
+          type: string
+        "symbols":
+          type: string
+        "apikey":
+          type: string
+        "api_version":
+          type: integer
+        "hours":
+          type: integer
+        "db_user":
+          type: string
+        "db_password":
+          type: string
+        "db_host":
+          type: string
+        "db_port":
+          type: integer
+        "db_name":
+          type: string

@@ -1,0 +1,14 @@
+.pure-g-r { display:table; width:100%; }
+
+.a,
+.b,
+.c {
+  vertical-align: middle;
+  display:table-cell;
+  height:100%;
+}
+
+.inside {
+  padding: 1em 0.5em;
+  text-align: center;
+}

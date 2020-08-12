@@ -89,7 +89,7 @@ def today(symbol,):
         df = db.get_single_day(symbol, db.get_simulated_date(config), config)
     except:
         abort(404)
-    return df.to_json()
+    return df.to_json(orient="records")
 
 
 @app.route(f"{API_VERSION}/analysis/<method>/<symbol>")
