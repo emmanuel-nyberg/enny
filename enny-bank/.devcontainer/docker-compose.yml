@@ -1,0 +1,62 @@
+services:
+  app:
+    # Uncomment the next line to use a non-root user for all processes. You can also
+    # simply use the "remoteUser" property in devcontainer.json if you just want
+    # VS Code and its sub-processes (terminals, tasks, debugging) to execute as the user
+    # On Linux, you may need to update the args USER_UID and USER_GID the "build" section
+    # to match your user if not 1000. See https://aka.ms/vscode-remote/containers/non-root for details.
+    # user: vscode
+
+    build: 
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+      args:
+        #
+        VARIANT: 3
+        USER_UID: 1000
+        USER_GID: 1000
+
+    volumes:
+      - ..:/workspace:cached
+    ports: 
+      - 5000:5000
+      
+    # Overrides default command so things don't shut down after the process ends.
+    command: sleep infinity
+    
+    links: 
+      - db
+      - enny
+      - redis
+    
+  enny:
+    image: enny:latest
+    restart: unless-stopped
+    command: bash start.sh
+    ports:
+      - 5001:5000
+    environment:
+      - ENNY_DB_USER=enny
+      - ENNY_APIKEY=03VY6PIQ0F7QP4KE
+      - ENNY_DB_HOST=ennydb
+    links:
+      - ennydb
+
+  ennydb:
+    image: postgres
+    restart: unless-stopped
+    ports: 
+      - 5432:5432
+    environment:
+      POSTGRES_PASSWORD: LocalPassword
+      POSTGRES_USER: enny
+
+  db:
+    image: mongo
+    restart: unless-stopped
+    ports: 
+      - 27017:27017
+
+  redis:
+    image: redis
+    restart: unless-stopped

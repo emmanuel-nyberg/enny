@@ -1,4 +1,6 @@
 apikey
+*.terraform
+*.tfstate*
 .pylintrc
 .vscode
 __pycache__

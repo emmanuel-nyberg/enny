@@ -1,0 +1,13 @@
+black
+requests
+pylint
+requests-mock
+pandas
+matplotlib
+seaborn
+flask
+mpld3
+sqlalchemy
+sqlalchemy-utils
+psycopg2
+gunicorn

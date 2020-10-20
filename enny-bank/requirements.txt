@@ -1,0 +1,8 @@
+flask-pymongo
+flask
+requests
+pandas
+passlib
+celery
+redis
+gunicorn
